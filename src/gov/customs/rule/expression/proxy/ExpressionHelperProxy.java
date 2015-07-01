@@ -10,6 +10,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 import org.antlr.ext.ConditionExpression.*;
+import org.antlr.ext.ConditionExpression.Utility.GetTypeUtility;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -20,6 +21,12 @@ import org.hibernate.cfg.Configuration;
 
 
 import org.hibernate.transform.Transformers;
+
+
+
+
+
+
 
 
 
@@ -52,14 +59,22 @@ public class ExpressionHelperProxy {
 	public Class<?> getType(String exprCond, String subsys){
 		HashMap<String, Class<?>> hmData = null;
 		try {
-			hmData = getUsedCalsses(subsys);
+			hmData = getUsedClass(subsys);
 		} catch (MalformedURLException | ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return (Class<?>)new Expression().getType(exprCond, (Object)hmData);
 	}
 
+	/**
+	 * 根据表达式获得返回的数据类型
+	 * @param exprCond
+	 * @return
+	 */
+	public Class<?> getType(String exprCond, HashMap<String, Class<?>> hmdata){
+		return (Class<?>)new Expression().getType(exprCond, (Object)hmdata);
+	}
+	
 	/**
 	 * 使用完整路径获得class实例
 	 * @param jarFullPath
@@ -74,25 +89,33 @@ public class ExpressionHelperProxy {
 	}
 	
 	/**
+	 * 
+	 * @return
+	 * @throws MalformedURLException
+	 * @throws ClassNotFoundException
+	 */
+	public HashMap<String, HashMap<String, Class<?>>> getAllUsedClass() throws MalformedURLException, ClassNotFoundException{
+		String sql = "select * from RULE_ENTITY_JAR";
+		HashMap<String, HashMap<String, Class<?>>> allSubsysJars = new HashMap<String, HashMap<String, Class<?>>>();
+		Query query = getSessionFactory().createSQLQuery(sql).addEntity(RuleEntityJar.class);
+		List<RuleEntityJar> list = query.list();
+		for (RuleEntityJar entityJar : list) {
+			allSubsysJars.put(entityJar.getSubSystem(), getUsedClass(entityJar.getSubSystem()));
+		}
+		return allSubsysJars;
+	}
+	
+	/**
 	 * 获取需要使用key和class构成的hashmap
 	 * @return
 	 * @throws ClassNotFoundException 
 	 * @throws MalformedURLException 
 	 */
-	
 	@SuppressWarnings("unchecked")
-	public HashMap<String, Class<?>> getUsedCalsses(String subsys) throws MalformedURLException, ClassNotFoundException {
+	public HashMap<String, Class<?>> getUsedClass(String subsys) throws MalformedURLException, ClassNotFoundException {
 		HashMap<String, Class<?>> hmdata = new HashMap<String, Class<?>>();
-		//TODO:
-		SessionFactory sessionFactory = null;
-		try {
-			sessionFactory= new Configuration().configure()
-					.buildSessionFactory();
-		} catch (HibernateException e) {
-			e.printStackTrace();
-		}
-		Session s = sessionFactory.openSession();
-
+		Session s = getSessionFactory();
+		
 		String sql = "select ENTITY_MAPPING.KEY, ENTITY_MAPPING.CLASS_FULLNAME, ENTITY_JAR.SUB_SYSTEM,ENTITY_JAR.JAR_FULLPATH "
 		+ "	FROM ENTITY_MAPPING INNER JOIN ENTITY_JAR on ENTITY_MAPPING.JAR_ID = ENTITY_JAR.ID "
 		+ " WHERE ENTITY_JAR.SUB_SYSTEM = '" + subsys + "'";
@@ -101,10 +124,10 @@ public class ExpressionHelperProxy {
 		
 		List list = query.list();
 		
-		String key ;
-		String jarFullPath;
-		String classFuleName;
-		Map map;
+		String key = "";
+		String jarFullPath = "";
+		String classFuleName = "";
+		Map map = null;
 		Iterator iterator = list.iterator();
 
 		while (iterator.hasNext()) {
@@ -116,6 +139,26 @@ public class ExpressionHelperProxy {
 		}
 	
 		return hmdata;
+	}
+
+	private Session getSessionFactory() {
+		SessionFactory sessionFactory = null;
+		try {
+			sessionFactory= new Configuration().configure()
+					.buildSessionFactory();
+		} catch (HibernateException e) {
+			e.printStackTrace();
+		}
+		return sessionFactory.openSession();
+	}
+	
+	/**
+	 * 计算表达式返回类型时，剪切不合规表达式字符串
+	 * @param exp
+	 * @return
+	 */
+	public String cutExpression(String exp) {
+		return new Expression().cutExpression(exp);
 	}
 	
 }
