@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<project name="ExpressionHelperProxy" default="deploy">
+	<target name="init">
+		<echo message="init"/>
+		<mkdir dir="build/classes" />
+		<mkdir dir="dist" />
+	</target>
+	<target name="compile" depends="init">
+		<echo message="compile"/>
+		<javac srcdir="src" destdir="build/classes" />
+	</target>
+	<!--
+	<target name="doc" depends="init">
+		<echo message="doc"/>
+		<javadoc destdir="build/classes" sourcepath="src" packagenames="org.*" />
+	</target>
+	-->
+	<target name="deploy" depends="compile">
+		<echo message="deploy"/>
+		<jar destfile="dist/project.jar" basedir="build/classes" >
+        <manifest>
+            <!--<attribute name="Main-Class" value="testversion" />-->
+            <attribute name="Class-Path" value="./ExpressionHelper.jar" />
+        </manifest>
+		</jar>
+	</target>
+</project>

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated Jul 7, 2015 10:16:54 AM by Hibernate Tools 3.4.0.CR1 -->
+<hibernate-mapping>
+    <class name="gov.customs.rule.data.RuleEntityMapping" table="RULE_ENTITY_MAPPING" schema="ALLSYS">
+        <id name="id" type="long">
+            <column name="ID" precision="10" scale="0" />
+            <generator class="assigned" />
+        </id>
+        <property name="key" type="string">
+            <column name="KEY" length="50" />
+        </property>
+        <property name="name" type="string">
+            <column name="NAME" length="50" />
+        </property>
+        <property name="classFullname" type="string">
+            <column name="CLASS_FULLNAME" />
+        </property>
+        <property name="subsystem" type="java.lang.Long">
+            <column name="SUBSYSTEM" precision="10" scale="0" />
+        </property>
+        <property name="jarId" type="java.lang.Long">
+            <column name="JAR_ID" precision="10" scale="0" />
+        </property>
+    </class>
+</hibernate-mapping>

@@ -1,13 +1,18 @@
 package gov.customs.rule.expression.proxy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+
+import javassist.expr.NewArray;
 
 import org.antlr.ext.ConditionExpression.*;
 import org.antlr.ext.ConditionExpression.Utility.GetTypeUtility;
@@ -21,6 +26,17 @@ import org.hibernate.cfg.Configuration;
 
 
 import org.hibernate.transform.Transformers;
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -55,8 +71,9 @@ public class ExpressionHelperProxy {
 	 * 根据表达式获得返回的数据类型
 	 * @param exprCond
 	 * @return
+	 * @throws Exception 
 	 */
-	public Class<?> getType(String exprCond, String subsys){
+	public Class<?> getType(String exprCond, BigDecimal subsys) throws Exception{
 		HashMap<String, Class<?>> hmData = null;
 		try {
 			hmData = getUsedClass(subsys);
@@ -70,9 +87,44 @@ public class ExpressionHelperProxy {
 	 * 根据表达式获得返回的数据类型
 	 * @param exprCond
 	 * @return
+	 * @throws Exception 
 	 */
-	public Class<?> getType(String exprCond, HashMap<String, Class<?>> hmdata){
+	public Class<?> getType(String exprCond, HashMap<String, Class<?>> hmdata) throws Exception{
 		return (Class<?>)new Expression().getType(exprCond, (Object)hmdata);
+	}
+
+	/**
+	 * 返回表达式类型的methods
+	 * @param exprCond
+	 * @param subsys
+	 * @return
+	 * @throws Exception 
+	 */
+	public ArrayList<Method> getTypeMethods(String exprCond, BigDecimal subsys) throws Exception{
+		HashMap<String, Class<?>> hmData = null;
+		try {
+			hmData = getUsedClass(subsys);
+		} catch (MalformedURLException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return new Expression().getTypeMethods(exprCond, (Object)hmData);
+	}
+	
+	/**
+	 * 返回表达式类型的fields
+	 * @param exprCond
+	 * @param subsys
+	 * @return
+	 * @throws Exception 
+	 */
+	public ArrayList<Field> getTypeFields(String exprCond, BigDecimal subsys) throws Exception{
+		HashMap<String, Class<?>> hmData = null;
+		try {
+			hmData = getUsedClass(subsys);
+		} catch (MalformedURLException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return new Expression().getTypeFields(exprCond, (Object)hmData);
 	}
 	
 	/**
@@ -94,13 +146,13 @@ public class ExpressionHelperProxy {
 	 * @throws MalformedURLException
 	 * @throws ClassNotFoundException
 	 */
-	public HashMap<String, HashMap<String, Class<?>>> getAllUsedClass() throws MalformedURLException, ClassNotFoundException{
+	public HashMap<BigDecimal, HashMap<String, Class<?>>> getAllUsedClass() throws MalformedURLException, ClassNotFoundException{
 		String sql = "select * from RULE_ENTITY_JAR";
-		HashMap<String, HashMap<String, Class<?>>> allSubsysJars = new HashMap<String, HashMap<String, Class<?>>>();
+		HashMap<BigDecimal, HashMap<String, Class<?>>> allSubsysJars = new HashMap<BigDecimal, HashMap<String, Class<?>>>();
 		Query query = getSessionFactory().createSQLQuery(sql).addEntity(RuleEntityJar.class);
 		List<RuleEntityJar> list = query.list();
 		for (RuleEntityJar entityJar : list) {
-			allSubsysJars.put(entityJar.getSubSystem(), getUsedClass(entityJar.getSubSystem()));
+			allSubsysJars.put(BigDecimal.valueOf(entityJar.getSubSystemId()), getUsedClass(BigDecimal.valueOf(entityJar.getSubSystemId())));
 		}
 		return allSubsysJars;
 	}
@@ -112,13 +164,13 @@ public class ExpressionHelperProxy {
 	 * @throws MalformedURLException 
 	 */
 	@SuppressWarnings("unchecked")
-	public HashMap<String, Class<?>> getUsedClass(String subsys) throws MalformedURLException, ClassNotFoundException {
+	public HashMap<String, Class<?>> getUsedClass(BigDecimal subsys) throws MalformedURLException, ClassNotFoundException {
 		HashMap<String, Class<?>> hmdata = new HashMap<String, Class<?>>();
 		Session s = getSessionFactory();
 		
 		String sql = "select ENTITY_MAPPING.KEY, ENTITY_MAPPING.CLASS_FULLNAME, ENTITY_JAR.SUB_SYSTEM,ENTITY_JAR.JAR_FULLPATH "
 		+ "	FROM ENTITY_MAPPING INNER JOIN ENTITY_JAR on ENTITY_MAPPING.JAR_ID = ENTITY_JAR.ID "
-		+ " WHERE ENTITY_JAR.SUB_SYSTEM = '" + subsys + "'";
+		+ " WHERE ENTITY_JAR.SUB_SYSTEM = " + subsys;
 
 		Query query = s.createSQLQuery(sql).setResultTransformer(Transformers.ALIAS_TO_ENTITY_MAP);
 		
@@ -141,6 +193,33 @@ public class ExpressionHelperProxy {
 		return hmdata;
 	}
 
+	public String checkCompileExpression(String exprCond) {
+		try {
+			new Expression(exprCond).Compile();
+			return "";
+		} catch (Exception e) {
+			return e.getMessage();
+		}
+	}
+	
+	/**
+	 * 检测表达式是否符合规则
+	 * @param exprCond
+	 * @param subsys
+	 * @return
+	 */
+	public String checkExpression(String exprCond, BigDecimal subsys)  {
+		try {
+			Class<?> class1 = getType(exprCond, subsys);
+			return "";
+		} catch (Exception e) {
+			return e.getMessage();
+		}
+	}
+	/**
+	 * 获取当前hibernate的session
+	 * @return
+	 */
 	private Session getSessionFactory() {
 		SessionFactory sessionFactory = null;
 		try {
