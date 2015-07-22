@@ -1,6 +1,6 @@
 package gov.customs.rule.data;
 
-// Generated Jul 7, 2015 10:16:54 AM by Hibernate Tools 3.4.0.CR1
+// Generated Jul 22, 2015 10:19:43 AM by Hibernate Tools 3.4.0.CR1
 
 import java.util.List;
 import javax.naming.InitialContext;

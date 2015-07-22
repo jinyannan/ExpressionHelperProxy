@@ -10,5 +10,6 @@
   <property name="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</property>
   <mapping class="gov.customs.rule.data.RuleEntityJar" resource="gov/customs/rule/data/RuleEntityJar.hbm.xml"/>
   <mapping class="gov.customs.rule.data.RuleEntityMapping" resource="gov/customs/rule/data/RuleEntityMapping.hbm.xml"/>
+  <mapping class="gov.customs.rule.data.RuleData" resource="gov/customs/rule/data/RuleData.hbm.xml"/>
  </session-factory>
 </hibernate-configuration>
