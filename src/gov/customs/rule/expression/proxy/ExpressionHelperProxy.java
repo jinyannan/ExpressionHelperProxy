@@ -26,19 +26,25 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.internal.util.type.PrimitiveWrapperHelper.LongDescriptor;
+import org.hibernate.service.ServiceRegistry;
+import org.hibernate.service.ServiceRegistryBuilder;
 import org.hibernate.transform.Transformers;
 import org.jboss.logging.Logger;
 
-//import gov.customs.jm.data.RuleRelData;
 import gov.customs.rule.data.*;
 
 public class ExpressionHelperProxy {
 
 	private static final org.apache.logging.log4j.Logger logger = LogManager
-			.getLogger("TestLog.TestLog");
+			.getLogger("gov.customs.rule.expression.proxy");
 
 	public enum LogType {
 		Error, Trace;
+	}
+
+	public Object ExecuteExpression(RuleLogData logData, Object data) {
+		HashMap<String, Object> hmlocal = new HashMap<String, Object>();
+		return ExecuteExpression(logData, data, (Object) hmlocal);
 	}
 
 	/**
@@ -48,12 +54,13 @@ public class ExpressionHelperProxy {
 	 * @param data
 	 * @return
 	 */
-	public Object ExecuteExpression(RuleLogData logData, Object data) {
+	public Object ExecuteExpression(RuleLogData logData, Object data,
+			Object local) {
 		Object result;
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd H:m:s");
 		long beginTime = new Date().getTime();
-		result = new Expression()
-				.ExecuteExpression(logData.getRuleCond(), data);
+		result = new Expression().ExecuteExpression(logData.getRuleCond(),
+				data, local);
 		long endTime = new Date().getTime();
 		if (logData.getIsLog()) {
 			String message = String.format("%d;%s;%s;%s;%d;%s;%s", logData
@@ -66,29 +73,65 @@ public class ExpressionHelperProxy {
 
 		return result;
 	}
-	
+
 	public Object ExecuteExpression(BigDecimal ruleId, Object data) {
-		Object result;
-		
-		RuleData logData = getRuleData(ruleId);
-		
+		HashMap<String, Object> hmlocal = new HashMap<String, Object>();
+		return ExecuteExpression(ruleId, data, (Object) hmlocal);
+	}
+
+	/**
+	 * 通过ruleid执行规则
+	 * 
+	 * @param ruleId
+	 * @param data
+	 * @param local
+	 * @return
+	 */
+	public Object ExecuteExpression(BigDecimal ruleId, Object data, Object local) {
+		RuleData ruleData = getRuleData(ruleId);
+		return ExecuteExpression(ruleData,  data,  local);
+	}
+
+	public Object ExecuteExpression(RuleData ruleData, Object data, Object local) {
+		Boolean preResult = false;
+		Object result = false;
+
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd H:m:s");
 		long beginTime = new Date().getTime();
-		result = new Expression()
-				.ExecuteExpression(logData.getRuleCond(), data);
+
+		String preRuleCond = ruleData.getPreRuleCond();
+		String ruleCond = ruleData.getRuleCond();
+
+		if (preRuleCond == null || preRuleCond.trim().equals("")) {
+			preResult = true;
+		} else {
+			preResult = (Boolean) new Expression().ExecuteExpression(
+					preRuleCond, data, local);
+		}
+		if (preResult) {
+			if (ruleCond == null || ruleCond.trim().equals("")) {
+				result = (Boolean) true;
+			} else {
+				result = new Expression().ExecuteExpression(
+						ruleData.getRuleCond(), data, local);
+			}
+		}
+
 		long endTime = new Date().getTime();
-		if (logData.getIsLog()) {
-			String message = String.format("%d;%s;%s;%s;%d;%s;%s", logData
-					.getRuleId().intValue(), logData.getRuleName(), format
+
+		if (ruleData.getIsLog()) {
+			String message = String.format("%d;%s;%s;%s;%d;%s;%s", ruleData
+					.getRuleId().intValue(), ruleData.getRuleName(), format
 					.format(beginTime), format.format(endTime), endTime
-					- beginTime, String.valueOf(result), String.valueOf(logData
-					.getIsEstimate()));
+					- beginTime, String.valueOf(result), String
+					.valueOf(ruleData.getIsEstimate()));
 			printLog(message, LogType.Trace);
 		}
 
 		return result;
 	}
 
+	
 	public Object ExecuteExpression(String exprCond, Object data) {
 		return new Expression().ExecuteExpression(exprCond, data);
 	}
@@ -199,7 +242,7 @@ public class ExpressionHelperProxy {
 			String path) throws MalformedURLException, ClassNotFoundException {
 		String sql = "select * from RULE_ENTITY_JAR";
 		HashMap<BigDecimal, HashMap<String, Class<?>>> allSubsysJars = new HashMap<BigDecimal, HashMap<String, Class<?>>>();
-		Query query = getSessionFactory().createSQLQuery(sql).addEntity(
+		Query query = getSessionNew().createSQLQuery(sql).addEntity(
 				RuleEntityJar.class);
 		List<RuleEntityJar> list = query.list();
 		for (RuleEntityJar entityJar : list) {
@@ -223,12 +266,11 @@ public class ExpressionHelperProxy {
 	public HashMap<String, Class<?>> getUsedClass(BigDecimal subsys, String path)
 			throws MalformedURLException, ClassNotFoundException {
 		HashMap<String, Class<?>> hmdata = new HashMap<String, Class<?>>();
-		Session s = getSessionFactory();
 
 		String sql = "select RULE_ENTITY_MAPPING.KEY, RULE_ENTITY_MAPPING.CLASS_FULLNAME, RULE_ENTITY_JAR.SUB_SYSTEM_ID,RULE_ENTITY_JAR.JAR_FULLPATH "
 				+ " FROM RULE_ENTITY_MAPPING INNER JOIN RULE_ENTITY_JAR on RULE_ENTITY_MAPPING.JAR_ID = RULE_ENTITY_JAR.ID "
 				+ " WHERE RULE_ENTITY_JAR.SUB_SYSTEM_ID = " + subsys;
-		Query query = s.createSQLQuery(sql).setResultTransformer(
+		Query query = getSessionNew().createSQLQuery(sql).setResultTransformer(
 				Transformers.ALIAS_TO_ENTITY_MAP);
 
 		List list = query.list();
@@ -242,9 +284,9 @@ public class ExpressionHelperProxy {
 		while (iterator.hasNext()) {
 			map = (Map) iterator.next();
 			key = (String) map.get("KEY");
-			// XXX
-			//jarFullPath = path + (String) map.get("JAR_FULLPATH");
-			jarFullPath = "file:/templib/TestCaseForRule.jar";
+			// FIXME
+			jarFullPath = path + (String) map.get("JAR_FULLPATH");
+			//jarFullPath = "file:/templib/TestCaseForRule.jar";
 			classFuleName = (String) map.get("CLASS_FULLNAME");
 			hmdata.put(key, getClassByJar(jarFullPath, classFuleName));
 		}
@@ -304,6 +346,7 @@ public class ExpressionHelperProxy {
 	 * 
 	 * @return
 	 */
+	@Deprecated
 	private Session getSessionFactory() {
 		SessionFactory sessionFactory = null;
 		try {
@@ -315,14 +358,22 @@ public class ExpressionHelperProxy {
 		return sessionFactory.openSession();
 	}
 
-	public RuleData getRuleData(BigDecimal ruleId){
+	private Session getSessionNew() {
+		Configuration cfg = new Configuration().configure();
+		ServiceRegistry serviceRegistry = new ServiceRegistryBuilder()
+				.applySettings(cfg.getProperties()).buildServiceRegistry();
+		SessionFactory factory = cfg.buildSessionFactory(serviceRegistry);
+		return factory.openSession();
+	}
+
+	public RuleData getRuleData(BigDecimal ruleId) {
 		String sql = "select * from RULE_DATA where RULE_ID = " + ruleId;
-		Query query = getSessionFactory().createSQLQuery(sql).addEntity(
+		Query query = getSessionNew().createSQLQuery(sql).addEntity(
 				RuleData.class);
 		List<RuleData> list = query.list();
 		return list.get(0);
 	}
-	
+
 	/**
 	 * 计算表达式返回类型时，剪切不合规表达式字符串
 	 * 

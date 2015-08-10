@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+	<Properties>
+		<property name="log_pattern1">[%d{yyyy-MM-dd HH:mm:ss z} %-5level %class{36}
+			%L %M] - %msg%xEx%n</property>
+		<property name="log_pattern2">[%-5p] %d %c - %m%n</property>
+		<property name="log_pattern3">[%-5p] %d %c %t - %m%n</property>
+		<property name="log_pattern4">[%-5p] %d %c %t $${date:yyyy-MM}
+			Thread:%X{ThreadID} - %m%n</property>
+		<property name="log_pattern5">[%-5p] %d Thread:%X{ThreadID} --- %m%n
+		</property>
+		<property name="expr_file_name">logs/expr_log.log</property>
+		<property name="rule_file_name">logs/expr_log.log</property>
+		<property name="rolling_file_name">logs/app-%d{yyyy-MM-dd}-%i.log.gz</property>
+		<property name="every_file_size">10M</property><!-- 日志切割的最小单位 -->
+		<property name="output_log_level">debug</property><!-- 日志输出级别 -->
+	</Properties>
+
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<!-- <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY" 
+				/> -->
+			<PatternLayout pattern="${log_pattern5}" />
+		</Console>
+		<!-- <File name="File" fileName="logs/jmlog.log"> <PatternLayout pattern="[%-5p] 
+			%d %c - %m%n" /> </File> -->
+		<RollingFile name="ExprRollingFile" fileName="${expr_file_name}"
+			filePattern="${rolling_file_name}">
+			<PatternLayout pattern="${log_pattern5}" />
+			<!-- <TimeBasedTriggeringPolicy interval="6" modulate="true"/> -->
+			<SizeBasedTriggeringPolicy size="${every_file_size}" />
+			<!-- <Filters> <ThresholdFilter level="error" onMatch="DENY" onMismatch="NEUTRAL" 
+				/> <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY" /> </Filters> -->
+		</RollingFile>
+		<RollingFile name="RuleRollingFile" fileName="${rule_file_name}"
+			filePattern="${rolling_file_name}">
+			<PatternLayout pattern="${log_pattern5}" />
+			<!-- <TimeBasedTriggeringPolicy interval="6" modulate="true"/> -->
+			<SizeBasedTriggeringPolicy size="${every_file_size}" />
+			<!-- <Filters> <ThresholdFilter level="error" onMatch="DENY" onMismatch="NEUTRAL" 
+				/> <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY" /> </Filters> -->
+		</RollingFile>
+		<!-- <appender name="JDBCAppender" class="org.apache.log4j.jdbc.JDBCAppender"> 
+			<param name="URL" value="jdbc:oracle:thin:@127.0.0.1:1521:mumu" /> <param 
+			name="user" value="liulibo" /> <param name="password" value="liulibo" /> 
+			<param name="driver" value="oracle.jdbc.driver.OracleDriver" /> <layout class="org.apache.log4j.PatternLayout"> 
+			<param name="ConversionPattern" value="insert into log4j(createdate,thread,level_,class,message) 
+			values(\'%d\',\'%t\',\'%-5p\',\'%c\',\'%m\')" /> </layout> </appender> -->
+		<!-- <RollingFile name="RollingFile1" fileName="${file_name}" filePattern="logs/app1-%d{yyyy-MM-dd}-%i.log"> 
+			<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss z} %-5level %class{36} %L 
+			%M - %msg%xEx%n" /> <SizeBasedTriggeringPolicy size="10MB" /> <Filters> <ThresholdFilter 
+			level="error" onMatch="DENY" onMismatch="NEUTRAL" /> <ThresholdFilter level="trace" 
+			onMatch="ACCEPT" onMismatch="DENY" /> </Filters> </RollingFile> -->
+		<!-- <Routing name="Routing"> <Routes pattern="$${sd:type}"> <Route> <RollingFile 
+			name="Rolling-$${sd:type}" fileName="${filename}" filePattern="target/rolling1/test1-$${sd:type}.%i.log.gz"> 
+			<PatternLayout> <pattern>%d %p %c{1.} [%t] %m%n</pattern> </PatternLayout> 
+			<SizeBasedTriggeringPolicy size="500" /> </RollingFile> </Route> <Route ref="STDOUT" 
+			key="Audit" /> <Route ref="List" key="Service" /> </Routes> </Routing> -->
+	</Appenders>
+	<Loggers>
+		<Logger name="gov.customs.rule.expression.proxy" level="TRACE">
+			<AppenderRef ref="RollingFile" />
+		</Logger>
+		<Logger name="gov.customs.rule.expression.complexrule" level="TRACE">
+			<AppenderRef ref="RollingFile" />
+		</Logger>
+		<Root level="INFO">
+			<AppenderRef ref="Console" />
+			<!-- <AppenderRef ref="File" /> -->
+		</Root>
+	</Loggers>
+</Configuration>
